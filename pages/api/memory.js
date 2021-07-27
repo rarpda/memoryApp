@@ -17,12 +17,11 @@ export default function (req, res) {
       const date = req.body.date;
       const people = req.body.People;
 
-      return createMemory(title,date,people).then(()=> res.status(200).json(result))
+      return createMemory(title,date,people).then(()=> res.status(201).json(result))
       .catch(error=>{
         console.log(error)
         res.status(500).end(error)
       })
-      break;
     default:
       console.error('Error')
         res.status(400).json({ message: `User with id: ${id} not found.` })
