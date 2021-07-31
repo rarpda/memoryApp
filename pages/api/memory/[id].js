@@ -1,6 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 //const db = require('./db-controller/connector.js')
-import { getMemory } from "../connector.js";
+import { getMemory,editMemory, deleteMemory} from "../connector.js";
+
+function errorHandling(error){
+  console.error("[id]: "+error)
+  res.status(500).end();
+}
 
 export default function (req, res) {
   const id = parseInt(req.query.id);
@@ -14,33 +19,20 @@ export default function (req, res) {
       return getMemory(id)
         .then((result) => {
           result ? res.status(200).json(result) : res.status(404).end();
-        })
-        .catch((error) => {
-          console.error("[id]: "+error)
-          res.status(500).end();
-        });
+        }, errorHandling);
     case "PATCH":
-      return editMemory(id, req.body.memeory, req.body.people)
+      return editMemory(id, req.body.memory, req.body.people)
         .then((result) => {
           result ? res.status(202).json(result) : res.status(404).end();
-        })
-        .catch((error) => {
-          console.error("[id]: "+error)
-          res.status(500).end();
-        });
+        }, errorHandling);
     case "DELETE":
       return deleteMemory(id)
         .then((result) => {
           result ? res.status(202).json(result) : res.status(404).end();
-        })
-        .catch((error) => {
-          console.error("[id]: "+error)
-          res.status(500).end();
-        });
-      break;
+        }, errorHandling);
     default:
       console.error("Malformed request.")
-      res.status(400).end(); //MALFORMED REQUESTS
+      res.status(405).end(); //Unsupported method.
       break;
   }
 }
