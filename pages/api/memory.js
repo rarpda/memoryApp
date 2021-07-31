@@ -5,10 +5,10 @@ import {listAllMemories, createMemory} from "./connector.js"
 export default function (req, res) {
   switch(req.method) {
     case 'GET':
-      return listAllMemories()
+      return listAllMemories((req.query.includePeople?req.query.includePeople.trim():false)==="true")
       .then(result=> res.status(200).json(result))
       .catch(error=>{
-        console.log(error)
+        console.error(error)
         res.status(500).end(error)
       })
       break;
@@ -19,12 +19,12 @@ export default function (req, res) {
 
       return createMemory(title,date,people).then(()=> res.status(201).json(result))
       .catch(error=>{
-        console.log(error)
+        console.error(error)
         res.status(500).end(error)
       })
     default:
-      console.error('Error')
-        res.status(400).json({ message: `User with id: ${id} not found.` })
+      console.error(`Not supporting HTTP verb ${req.method}`);
+      res.status(405).end();
       break;
   }
 }

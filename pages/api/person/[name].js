@@ -26,10 +26,6 @@ export default function (req, res) {
     res.status(400).end(); //MALFORMED REQUESTS
   }
   switch (req.method) {
-    case "POST":
-      return createPerson(req.body.person).then((result) => {
-        result ? res.status(200).json(result) : res.status(404).end();
-      }, errorHandling);
     case "GET":
       return getPerson(name).then((result) => {
         result ? res.status(200).json(result) : res.status(404).end();
@@ -43,8 +39,8 @@ export default function (req, res) {
         result ? res.status(202).json(result) : res.status(404).end();
       }, errorHandling);
     default:
-      console.error("Malformed request.");
-      res.status(405).end(); //Unsupported method.
+      console.error(`Not supporting HTTP verb ${req.method}`);
+      res.status(405).end();
       break;
   }
 }
