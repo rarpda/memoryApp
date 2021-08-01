@@ -5,7 +5,7 @@ const URI = "neo4j://localhost";
 const DB = "neo4j";
 const driver = neo4j.driver(URI, neo4j.auth.basic(USER, PASSWORD));
 
-//TODO create constraints on types in db
+//TODO create constraints on types in db, ERROR THAT DB IS NOT SET
 
 // const neo4j = window.neo4j;
 // const neo4jUri = process.env.NEO4J_URI;

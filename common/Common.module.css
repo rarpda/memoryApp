@@ -2,13 +2,13 @@
 .h1 {
     color: white;
     grid-column: 4 / span 2;
-    place-self: center center;
+    place-self: center;
 }
 
 .button {
     background-color: white;
     grid-column: 8 / span 1;
-    /* align-self: center; */
+    place-self: center;
 }
 
 .header {
@@ -17,4 +17,3 @@
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: 100%;
 }
-

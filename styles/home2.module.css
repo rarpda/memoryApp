@@ -1,0 +1,22 @@
+.main {
+    position: relative;
+    min-height: 100vh;
+  }
+
+.sidebar {
+    border-left: 10px;
+    border-color: beige;
+    background-color: red;
+    grid-column: 2 /span 0;
+}
+
+.screen{
+    background-color: blue;
+    grid-column: 1/spain 0;
+}
+
+.container{
+    display: grid;
+    padding-bottom: 2.5rem;    /* Footer height */
+    grid-template-columns: 70% 30%;
+}
