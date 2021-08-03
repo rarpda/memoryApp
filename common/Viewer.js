@@ -9,12 +9,12 @@ import useSWR from "swr";
 //   // if it leaves a node it should remove highlight
 // }
 
-
 //todo ref - for list of data
 //add x,y position
-function Viewer({ windowDimensions }) {
+function Viewer({ setSideBarNode }) {
   const canvasRef = useRef(null);
   let includePeople = true;
+  console.log(setSideBarNode);
   //Our first draw
   const fetcher = (...args) => fetch(...args).then((res) => res.json());
   const { data, error } = useSWR(
@@ -33,6 +33,7 @@ function Viewer({ windowDimensions }) {
       });
     });
   }
+
 
   function isNodeCheck(x, y, r) {
     //Get closest node
@@ -71,8 +72,22 @@ function Viewer({ windowDimensions }) {
     // }
     return node;
   }
+
+  function onClickListener(event) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    let nodeClicked = isNodeCheck(x, y, 15);
+    if (nodeClicked) {
+      setSideBarNode(nodeClicked);
+    } else {
+      /*Not clicked on a node. */
+    }
+  }
+
+
   let highlightNode;
-  function onClick(event) {
+  function onHoverListener(event) {
     //Check if clicking on node.
     //if so update sidebar with info
     // isNodeCheck(x.y)
@@ -80,20 +95,17 @@ function Viewer({ windowDimensions }) {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    // console.log(
     let context = canvasRef.current.getContext("2d");
-    // .getImageData(x, y, 1, 1).data
-    // );
     //TODO check canvas for empty
-    console.log("x: " + x + " y: " + y);
+    // console.log("x: " + x + " y: " + y);
     let newNode = isNodeCheck(x, y, 15);
     if (newNode) {
       if (newNode !== highlightNode) {
-        console.log(highlightNode)
+        console.log(highlightNode);
         if (highlightNode) {
           /*Remove highlight */
           context.beginPath();
-          context.strokeStyle  = "rgb(0,0,255)"; //blue
+          context.strokeStyle = "rgb(0,0,255)"; //blue
           context.arc(highlightNode.x, highlightNode.y, 20, 0, 2 * Math.PI);
           context.lineWidth = 5;
           context.stroke();
@@ -103,7 +115,7 @@ function Viewer({ windowDimensions }) {
         /*highlight new*/
         highlightNode = newNode;
         context.beginPath();
-        context.strokeStyle  = "rgb(0,155,155)"; //red
+        context.strokeStyle = "rgb(0,155,155)"; //red
         context.arc(highlightNode.x, highlightNode.y, 20, 0, 2 * Math.PI);
         context.lineWidth = 5;
         context.stroke();
@@ -111,17 +123,17 @@ function Viewer({ windowDimensions }) {
         //Update sidebar
       }
     } else {
-      console.log("missed",highlightNode)
+      console.log("missed", highlightNode);
       if (highlightNode) {
         /* Ignore -- look at relationshio later */
         context.beginPath();
-        context.strokeStyle  = "rgb(0,0,255)"; //red
+        context.strokeStyle = "rgb(0,0,255)"; //red
         context.arc(highlightNode.x, highlightNode.y, 20, 0, 2 * Math.PI);
         context.lineWidth = 6;
         context.stroke();
         context.closePath();
       }
-      highlightNode=null;
+      highlightNode = null;
     }
     // https://stackoverflow.com/questions/55677/how-do-i-get-the-coordinates-of-a-mouse-click-on-a-canvas-element
   }
@@ -134,7 +146,7 @@ function Viewer({ windowDimensions }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
-    console.log("cahnge in efect")
+    console.log("cahnge in efect");
     if (items) {
       items.forEach((memory) => {
         if (includePeople) {
@@ -186,7 +198,13 @@ function Viewer({ windowDimensions }) {
   //   if (!data) return <div>loading...</div>;
 
   return (
-    <canvas ref={canvasRef} onMouseMove={onClick} height="1000px" width="1000px" />
+    <canvas
+      ref={canvasRef}
+      onClick={onClickListener}
+      onMouseMove={onHoverListener}
+      height="1000px"
+      width="1000px"
+    />
   );
 }
 

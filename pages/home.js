@@ -4,12 +4,14 @@ import Header from '../common/header'
 import Sidebar from "../common/Sidebar"
 import Footer from "../common/Footer"
 import Viewer from "../common/Viewer"
+import { useState } from 'react'
 
 export default function Home() {
 
   if (typeof window === "undefined") {
     return <div>loading...</div>;
   }
+  const [nodeToDisplay, setSideBarNode] = useState(null) 
   return (
     <main className="home">
       <Head>
@@ -20,10 +22,10 @@ export default function Home() {
       <Header></Header>
       <div className={styles.container}>
         <div className={styles.screen}>
-          <Viewer></Viewer>
+          <Viewer setSideBarNode={setSideBarNode}></Viewer>
         </div>
         <div className={styles.sidebar}>
-          <Sidebar>
+          <Sidebar nodeToDisplay={nodeToDisplay}>
           </Sidebar>
         </div>
       </div>
