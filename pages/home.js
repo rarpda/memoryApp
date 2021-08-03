@@ -5,8 +5,11 @@ import Sidebar from "../common/Sidebar"
 import Footer from "../common/Footer"
 import Viewer from "../common/Viewer"
 
-
 export default function Home() {
+
+  if (typeof window === "undefined") {
+    return <div>loading...</div>;
+  }
   return (
     <main className="home">
       <Head>
