@@ -49,20 +49,30 @@ exports.getMemory = (id) => {
  * @param {Array} people - A group of people who which this memory is shared.
  * @returns {Promise} A promise of get operation.
  */
-exports.createMemory = (title, date, people) => {
+exports.createMemory = (memory, people) => {
   const session = driver.session({ database: DB });
-  return session
-    .run(
-      "CREATE (m:Memory{title:$title,date:$date}) WITH m UNWIND $people AS people MERGE(p:Person{name:people}) MERGE((m)-[:SHARED]-(p)) return count(*)",
-      { people: people, title: title, date: date }
-    )
+
+  let runner;
+  if (people) {
+    runner = session.run(
+      "CREATE (m:Memory $memory) WITH m UNWIND $people AS people MERGE(p:Person{name:people}) MERGE((m)-[:SHARED]-(p)) return count(*)",
+      { people: people, memory: memory }
+    );
+  } else {
+    runner = session.run(
+      "CREATE (m:Memory $memory) return count(*)",
+      { memory: memory }
+    );
+  }
+
+  return runner
     .then((result) => {
       console.log(`Created ${result.records[0].length} nodes+relationships`);
       return result.records[0].length > 0;
     })
     .catch((error) => {
       console.error(error);
-      throw error;
+      return false;
     })
     .finally(() => session.close());
 };
@@ -83,17 +93,26 @@ exports.editMemory = (id, memory, people) => {
 
   const session = driver.session({ database: DB });
   //TODO make sure payload contains id outside of memory json.
-  return session
-    .run(
-      "MATCH(m:Memory) WHERE ID(m)=$id SET m=$memory WITH m UNWIND $people AS people MERGE(p:Person{name:people}) WITH p MERGE(m)-[:SHARED]->(p) return count(*)",
-      {
-        id: neo4j.int(id),
-        memory: memory,
-        people: people,
-      }
-    )
+  let runner;
+  if (people){
+    runner = session.run("MATCH(m:Memory) WHERE ID(m)=$id SET m=$memory WITH m UNWIND $people AS people MERGE(p:Person{name:people}) WITH p MERGE(m)-[:SHARED]->(p) return count(*)",
+    {
+      id: neo4j.int(id),
+      memory: memory,
+      people: people,
+    })
+  } else{
+    runner = session.run("MATCH(m:Memory) WHERE ID(m)=$id SET m=$memory WITH m MERGE(m) return count(*)",
+    {
+      id: neo4j.int(id),
+      memory: memory,
+    })
+  }
+
+  return runner
     .then((result) => {
       console.log(`Edited ${result.records[0].length} nodes+relationships`);
+      return result.records[0].length > 0
     })
     .catch((error) => {
       console.error(error);
@@ -113,8 +132,13 @@ exports.deleteMemory = (id) => {
     .run("MATCH (m:Memory) WHERE ID(m)=$id WITH m LIMIT 1 DETACH DELETE m", {
       id: neo4j.int(id),
     })
-    .then(() => {
-      console.log(`Memory with id ${id} deleted`);
+    .then((result) => {
+      if (result.records[0]) {
+        console.log(`Memory with id ${id} deleted`);
+        return true;
+      } else {
+        return false;
+      }
     })
     .catch((error) => {
       throw new Error(`Failed to delete memory with id ${id}.`);
@@ -147,7 +171,7 @@ exports.listAllMemories = (includePeople = false) => {
       output = {};
       result.records.forEach((record) => {
         /*Includes relationships with people */
-        const memId = record.get(0).identity.low
+        const memId = record.get(0).identity.low;
         if (includePeople) {
           const recordObject = record.toObject();
           /*Get relationship */
@@ -169,23 +193,40 @@ exports.listAllMemories = (includePeople = false) => {
             types: recordObject["p"].labels,
           });
           /* Create new if not set */
-          if(output[memId]["people"]){
-            output[memId]["people"].push(person)
-          } else{
-            output[memId]["people"] = [person]
+          if (output[memId]["people"]) {
+            output[memId]["people"].push(person);
+          } else {
+            output[memId]["people"] = [person];
           }
         } else {
           /* Only expecting memory */
-          output[memId] = Object.assign(
-            record.get(0).properties,
-            {
-              id: memId,
-              types: record.get(0).labels,
-            }
-          );
+          output[memId] = Object.assign(record.get(0).properties, {
+            id: memId,
+            types: record.get(0).labels,
+          });
         }
       });
       return output;
+    })
+    .finally(() => session.close());
+};
+
+/**
+ * Creates a person from the database based on the unique name provided.
+ * @public
+ * @param {Object} person - Person object to create.
+ * @returns {Promise} Promise to return create a person
+ */
+ exports.createPerson = (person) => {
+  const session = driver.session({ database: DB });
+  console.log(person)
+  
+  return session
+    .run("CREATE(p:Person $person) return p LIMIT 1", {
+      person: person,
+    })
+    .then((result) => {
+      return (result.records[0] && result.records[0].length > 0)
     })
     .finally(() => session.close());
 };
@@ -204,20 +245,18 @@ exports.getPersonByName = (name) => {
       name: name,
     })
     .then((result) => {
-      if(result.records[0] && result.records[0].length > 0){
-        const record = result.records[0].toObject()['p']
+      if (result.records[0] && result.records[0].length > 0) {
+        const record = result.records[0].toObject()["p"];
         return Object.assign(record.properties, {
           id: record.identity.low,
           types: record.labels,
         });
-      }
-      else{
+      } else {
         Promise.reject();
       }
     })
     .finally(() => session.close());
 };
-
 
 /**
  * Edits an existing person from the database.
@@ -225,21 +264,24 @@ exports.getPersonByName = (name) => {
  * @param {Object} person - Person object to store in db. Trusts the FE.
  * @returns {Promise} Promise to add person.
  */
+//TODO - NEW PERSON, OLD PERSON
 exports.editPerson = (person) => {
   const session = driver.session({ database: DB });
   return session
-    .run("MATCH (p:Person {name:'Joao2'}) SET p={name:'Joao2'} return p LIMIT 1", {
-      person: person
-    })
+    .run(
+      "MATCH (p:Person {name: $person }) SET p={name:'Joao2'} return p LIMIT 1",
+      {
+        person: person,
+      }
+    )
     .then((result) => {
-      if(result.records[0] && result.records[0].length > 0){
-        const record = result.records[0].toObject()['p']
+      if (result.records[0] && result.records[0].length > 0) {
+        const record = result.records[0].toObject()["p"];
         return Object.assign(record.properties, {
           id: record.identity.low,
           types: record.labels,
         });
-      }
-      else{
+      } else {
         Promise.reject();
       }
     })
@@ -258,8 +300,8 @@ exports.deletePerson = (name) => {
     .run("MATCH (p:Person{name=$name}) LIMIT 1 DETACH DELETE p", {
       name: name,
     })
-    .then(()=>console.log(`Person with ${name} deleted.`))
-    .catch(()=>console.error(`Person with ${name} not deleted.`))
+    .then(() => console.log(`Person with ${name} deleted.`))
+    .catch(() => console.error(`Person with ${name} not deleted.`))
     .finally(() => session.close());
 };
 /**
@@ -281,7 +323,8 @@ exports.listAllPeople = () => {
         });
       });
     })
-    .finally(() => session.close());};
+    .finally(() => session.close());
+};
 
 /* Close connection on exit. */
 function exitHandler(options, exitCode) {
@@ -292,3 +335,6 @@ function exitHandler(options, exitCode) {
 
 //do something when app is closing
 process.on("exit", exitHandler.bind(null, { cleanup: true }));
+
+console.log("Closing DB Driver");
+driver.close();
